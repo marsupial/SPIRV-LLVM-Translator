@@ -1107,6 +1107,45 @@ SPIRVValue *LLVMToSPIRV::oclTransSpvcCastSampler(CallInst *CI,
   return BV;
 }
 
+SPIRVInstruction* LLVMToSPIRV::addFAbs(IntrinsicInst *II, SPIRVBasicBlock *BB) {
+    llvm::IntegerType* IntType = IntegerType::getInt1Ty(M->getContext());
+    SPIRVType *BoolTy = transType(IntegerType::getInt1Ty(M->getContext()));
+    llvm::Value* Arg = II->getArgOperand(0);
+    SPIRVType *Ty = transType(Arg->getType());
+    SPIRVValue* FpVal = transValue(Arg, BB);
+    SPIRVValue* Neg = BM->addUnaryInst(OpFNegate, Ty, FpVal, BB);
+    auto Zero = transValue(Constant::getNullValue(Arg->getType()), BB);
+    SPIRVValue* Grtr = BM->addCmpInst(OpFOrdGreaterThanEqual, BoolTy,
+                                         FpVal, Zero, BB);
+    SPIRVInstruction* Instr = BM->addSelectInst(Grtr, FpVal, Neg, BB);
+    //Instr = addSelectionMergeInst(SPIRVId MergeBlock, Grtr, SPIRVBasicBlock *BB) = 0; 
+    // addLoadInst();
+    // addStoreInst();
+    // SPIRVInstruction* BC = addBranchConditionalInst(Grtr, static_cast<SPIRVLabel*>(),
+    //                                                  static_cast<SPIRVLabel*>(Neg),
+    //                                                  BB);
+    // addSelectionMergeInst(BB->getNumInst(), 0, 
+
+    return Instr;
+}
+
+SPIRVInstruction* LLVMToSPIRV::addCopySign(IntrinsicInst *II, SPIRVBasicBlock *BB) {
+    SPIRVInstruction* FAbs = addFAbs(II, BB);
+    return FAbs;
+
+    llvm::IntegerType* IntType = IntegerType::getInt1Ty(M->getContext());
+    SPIRVType *BoolTy = transType(IntegerType::getInt1Ty(M->getContext()));
+    llvm::Value* Arg = II->getArgOperand(0);
+    SPIRVType *Ty = transType(Arg->getType());
+    SPIRVValue* FpVal = transValue(Arg, BB);
+    SPIRVValue* Neg = BM->addUnaryInst(OpFNegate, Ty, FAbs, BB);
+    auto Zero = transValue(Constant::getNullValue(Arg->getType()), BB);
+    SPIRVValue* Grtr = BM->addCmpInst(OpFOrdGreaterThanEqual, BoolTy,
+                                         FpVal, Zero, BB);
+    SPIRVInstruction* Instr = BM->addSelectInst(Grtr, FAbs, Neg, BB);
+    return Instr;
+}
+
 SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
                                             SPIRVBasicBlock *BB) {
   auto GetMemoryAccess = [](MemIntrinsic *MI) -> std::vector<SPIRVWord> {
@@ -1121,6 +1160,12 @@ SPIRVValue *LLVMToSPIRV::transIntrinsicInst(IntrinsicInst *II,
   };
 
   switch (II->getIntrinsicID()) {
+  case Intrinsic::fabs: {
+    return addFAbs(II, BB);
+  }
+  case Intrinsic::copysign: {
+    return addCopySign(II, BB);
+  }
   case Intrinsic::fmuladd: {
     // For llvm.fmuladd.* fusion is not guaranteed. If a fused multiply-add
     // is required the corresponding llvm.fma.* intrinsic function should be

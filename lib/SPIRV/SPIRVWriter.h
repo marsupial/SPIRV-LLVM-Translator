@@ -178,6 +178,9 @@ private:
   SPIRVId addInt32(int);
   void transFunction(Function *I);
   SPIRV::SPIRVLinkageTypeKind transLinkageType(const GlobalValue *GV);
+
+  SPIRVInstruction* addFAbs(IntrinsicInst *II, SPIRVBasicBlock *BB);
+  SPIRVInstruction* addCopySign(IntrinsicInst *II, SPIRVBasicBlock *BB);
 };
 
 } // namespace SPIRV
